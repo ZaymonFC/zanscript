@@ -101,12 +101,3 @@
 
 (defn lex [input]
   (->> input (into []) lex-input (filter (complement whitespace-token?))))
-
-(time (lex "
-let embiggen = fn(x, y) {
-  if (x < y) {
-    return x + 10;
-  } else {
-    x + 100;
-  }
-}"))
