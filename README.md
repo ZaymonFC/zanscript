@@ -10,5 +10,5 @@ My goal is to reach feature parity with Monkey and add a few more interesting fe
 
 - [x] Question mark in variable names
 - [ ] Lexical analysis errors that print messages and source to the terminal
-- [ ] Thinks of more! 😂
+- [ ] Think of more! 😂
 

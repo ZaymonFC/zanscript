@@ -19,9 +19,10 @@
    \< :less-than
    \> :greater-than
 
-   \! :not
+   \! :not})
 
-   [\= \=] :equality
+(def two-character-tokens
+  {[\= \=] :equality
    [\! \=] :inequality})
 
 (def keywords
@@ -60,8 +61,8 @@
       (#{\- \? \_} c)))
 
 (defn operator-with-lookahead [op next-op]
-  (if (requires-peek? next-op)
-    [(get tokens [op next-op] :illegal) (str op next-op)]
+  (if-let [token (get two-character-tokens [op next-op])]
+    [token (str op next-op)]
     [(get tokens op :illegal) (str op)]))
 
 (defn slurp-whitespace [input]
