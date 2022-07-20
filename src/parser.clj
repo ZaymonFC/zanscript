@@ -45,7 +45,9 @@
     (let [error {:error error :offset offset}]
       (Parser. tokens offset (conj errors error)))))
 
+;; Lexically scoped parser-atom for holding parser state.
 (let [parser-atom (atom nil)]
+
   (defn- check-initialised [action]
     (assert
      (instance? Parser @parser-atom)
@@ -63,7 +65,7 @@
 
   (defn advance-parser! []
     (check-initialised :advance)
-    (swap! parser-atom (fn [parser] (parser-advance parser))))
+    (swap! parser-atom parser-advance))
 
   (defn track-error! [error]
     (check-initialised :track-error)
@@ -86,8 +88,13 @@
     If the next token is as expected, advance the parser one step."
     [expected]
     (let [[_current [next-token]] (current-tokens)]
-      (when (= next-token expected) (advance-parser!) true))))
-
+      (if (= next-token expected)
+        (do
+          (advance-parser!)
+          true)
+        (do
+          (track-error! (str "Expected next token to be `" expected "` but got `" next-token "` instead."))
+          false)))))
 
 ;; === Language Constructs ===
 (defn parse-let []
@@ -112,24 +119,23 @@
 (defn end-of-program? [[token _literal]] (= token :EOF))
 
 ;; === Root Parser ===
-(defn parse-program
-  "Parse program in a lazy sequence until we reach EOF or encounter an error"
+(defn lazy-parse-loop
+  "Parse program in a lazy sequence until we reach EOF"
+  []
+  (lazy-seq
+   (let [[token] (current-tokens)]
+     (if (not (end-of-program? token))
+       (let [statement (parse-statement!)]
+         (advance-parser!)
 
-  ;; Base
-  ([tokens] (init-parser! tokens) (parse-program))
+         (if statement
+           (cons statement (lazy-parse-loop))
+           (cons :ERROR (lazy-parse-loop))))))))
 
-  ([]
-   (lazy-seq
-    (let [[token] (current-tokens)]
-      (when (not (end-of-program? token))
-        (let [statement (parse-statement!)]
+(defn parse-program [tokens]
+  (init-parser! tokens)
 
-          (advance-parser!)
+  (let [program (into [] (lazy-parse-loop))
+        {:keys [errors] :as state} (check-parser-state)]
 
-          (if statement
-            (cons statement (parse-program))
-            (cons nil (parse-program)))))))))
-
-(init-parser! [])
-(advance-parser!)
-(track-error! "HELLO")
+    {:program program :failed ((complement empty?) errors) :errors errors}))
