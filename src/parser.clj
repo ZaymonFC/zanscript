@@ -1,5 +1,4 @@
-(ns zanscript.parser
-  :gen-class)
+(ns zanscript.parser)
 
 (comment
   "Parsing: The process of going from a stream of tokens into
@@ -20,6 +19,10 @@
 (defprotocol Expression)
 
 (defrecord LetStatement [token literal name value]
+  Statement
+  Node (token-literal [_] literal))
+
+(defrecord ReturnStatement [token literal]
   Statement
   Node (token-literal [_] literal))
 
@@ -97,7 +100,7 @@
           false)))))
 
 ;; === Language Constructs ===
-(defn parse-let []
+(defn parse-let! []
   (let [[let-token let-literal] (current-token)]
     (when (expect-next! :ident)
       (let [[_ident name] (current-token)]
@@ -109,11 +112,23 @@
 
         (LetStatement. let-token let-literal name nil)))))
 
+(defn parse-return! []
+  (let [[token literal] (current-token)]
+    (advance-parser!)
+
+		;; TODO: Parse the right hand expression here instead of fast forwarding
+    (while (not (or (current-token-is? :semicolon)
+                    (current-token-is? :EOF)))
+      (advance-parser!))
+
+    (ReturnStatement. token literal)))
+
 (defn parse-statement! []
   (let [[[current-token _literal _value]] (current-tokens)]
 
     (condp = current-token
-      :let (parse-let)
+      :let (parse-let!)
+      :return (parse-return!)
       :UNKNOWN-TOKEN)))
 
 (defn end-of-program? [[token _literal]] (= token :EOF))
@@ -124,7 +139,7 @@
   []
   (lazy-seq
    (let [[token] (current-tokens)]
-     (if (not (end-of-program? token))
+     (when (not (end-of-program? token))
        (let [statement (parse-statement!)]
          (advance-parser!)
 
@@ -136,6 +151,6 @@
   (init-parser! tokens)
 
   (let [program (into [] (lazy-parse-loop))
-        {:keys [errors] :as state} (check-parser-state)]
+        {:keys [errors]} (check-parser-state)]
 
     {:program program :failed ((complement empty?) errors) :errors errors}))

@@ -39,4 +39,8 @@
            :offset 8}]
          errors))))
 
+(deftest return-tests
+  (let [return-example "return 0; return 100; return \"Hello there\";"
+        {:keys [program]} (lex-then-parse return-example)]
 
+    (is (every? (fn [s] (-> s (statement-is :return))) program))))
