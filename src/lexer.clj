@@ -40,7 +40,7 @@
   - If starts with a letter
      - Consume the symbol or keyword
   - If other character, might have to look ahead for operators like
-      - == != etc.
+      == != etc.
   - Consumes or eats whitespace
 
   The token slurping is abstractly like this:
